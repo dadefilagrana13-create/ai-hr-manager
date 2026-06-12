@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI HR Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+<nav class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+  <div class="flex items-center gap-2">
+    <div class="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center text-sm font-bold">AI</div>
+    <span class="font-semibold text-lg">HR Manager</span>
+  </div>
+  <div class="flex gap-2">
+    <button onclick="showTab('dashboard')" class="tab-btn px-4 py-2 rounded-lg text-sm bg-violet-600 text-white" data-tab="dashboard">Dashboard</button>
+    <button onclick="showTab('jobs')" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white" data-tab="jobs">Jobs</button>
+    <button onclick="showTab('candidates')" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white" data-tab="candidates">Candidates</button>
+    <button onclick="showTab('ai-screen')" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white" data-tab="ai-screen">AI Screen</button>
+  </div>
+</nav>
+
+<div id="tab-dashboard" class="p-6">
+  <h1 class="text-2xl font-bold mb-6">Hiring Pipeline 🚀</h1>
+  <div class="grid grid-cols-4 gap-4 mb-8">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5"><p class="text-gray-400 text-sm">Open Positions</p><p class="text-3xl font-bold mt-1" id="stat-jobs">—</p></div>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5"><p class="text-gray-400 text-sm">Candidates</p><p class="text-3xl font-bold mt-1" id="stat-candidates">—</p></div>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5"><p class="text-gray-400 text-sm">AI Screened</p><p class="text-3xl font-bold mt-1" id="stat-screened">—</p></div>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5"><p class="text-gray-400 text-sm">Hired</p><p class="text-3xl font-bold mt-1 text-green-400" id="stat-hired">—</p></div>
+  </div>
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+    <h2 class="font-semibold mb-4">Recent Candidates</h2>
+    <div id="recent-candidates"></div>
+  </div>
+</div>
+
+<div id="tab-jobs" class="p-6 hidden">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Job Openings</h1>
+    <button onclick="showModal('job-modal')" class="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium">+ New Job</button>
+  </div>
+  <div id="jobs-list" class="grid grid-cols-2 gap-4"></div>
+</div>
+
+<div id="tab-candidates" class="p-6 hidden">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Candidates</h1>
+    <button onclick="showModal('candidate-modal')" class="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-lg text-sm font-medium">+ Add</button>
+  </div>
+  <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <table class="w-full text-sm"><thead class="border-b border-gray-800"><tr class="text-gray-400 text-left"><th class="px-4 py-3">Name</th><th class="px-4 py-3">Role</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">AI Score</th><th class="px-4 py-3"></th></tr></thead>
+    <tbody id="candidates-table"></tbody></table>
+  </div>
+</div>
+
+<div id="tab-ai-screen" class="p-6 hidden">
+  <h1 class="text-2xl font-bold mb-2">AI Screening</h1>
+  <p class="text-gray-400 mb-6">Paste a CV and get instant AI analysis.</p>
+  <div class="grid grid-cols-2 gap-6">
+    <div class="space-y-4">
+      <input id="screen-role" type="text" placeholder="Job Role" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500" />
+      <input id="screen-skills" type="text" placeholder="Required skills (comma separated)" class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500" />
+      <textarea id="screen-cv" rows="10" placeholder="Paste CV here..." class="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500 resize-none"></textarea>
+      <button onclick="runAIScreen()" class="w-full bg-violet-600 hover:bg-violet-700 py-2 rounded-lg font-medium">🤖 Run AI Screening</button>
+    </div>
+    <div id="ai-result" class="bg-gray-900 border border-gray-800 rounded-xl p-5 min-h-64"><p class="text-gray-500 text-sm">AI analysis will appear here...</p></div>
+  </div>
+</div>
+
+<div id="job-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center hidden z-50">
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md">
+    <h2 class="font-bold text-lg mb-4">New Job Opening</h2>
+    <div class="space-y-3">
+      <input id="job-title" type="text" placeholder="Job Title" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+      <input id="job-dept" type="text" placeholder="Department" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+      <input id="job-location" type="text" placeholder="Location / Remote" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+      <textarea id="job-desc" rows="3" placeholder="Description..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+      <select id="job-type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option></select>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <button onclick="saveJob()" class="flex-1 bg-violet-600 hover:bg-violet-700 py-2 rounded-lg text-sm font-medium">Save</button>
+      <button onclick="hideModal('job-modal')" class="flex-1 bg-gray-800 py-2 rounded-lg text-sm">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="candidate-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center hidden z-50">
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md">
+    <h2 class="font-bold text-lg mb-4">Add Candidate</h2>
+    <div class="space-y-3">
+      <input id="cand-name" type="text" placeholder="Full Name" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+      <input id="cand-email" type="email" placeholder="Email" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+      <input id="cand-role" type="text" placeholder="Applying for..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
+      <select id="cand-status" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"><option>New</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option></select>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <button onclick="saveCandidate()" class="flex-1 bg-violet-600 hover:bg-violet-700 py-2 rounded-lg text-sm font-medium">Save</button>
+      <button onclick="hideModal('candidate-modal')" class="flex-1 bg-gray-800 py-2 rounded-lg text-sm">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://nmulrsbqdeqokvrybapn.supabase.co';
+const SUPABASE_KEY = '%%SUPABASE_ANON_KEY%%';
+const GROQ_KEY = '%%GROQ_KEY%%';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function showTab(tab) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById('tab-' + tab).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(btn => { btn.classList.remove('bg-violet-600','text-white'); btn.classList.add('text-gray-400'); });
+  const active = document.querySelector(`[data-tab="${tab}"]`);
+  active.classList.add('bg-violet-600','text-white'); active.classList.remove('text-gray-400');
+  if (tab==='jobs') loadJobs();
+  if (tab==='candidates') loadCandidates();
+}
+function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+function statusColor(s) { return {New:'bg-blue-900 text-blue-300',Screening:'bg-yellow-900 text-yellow-300',Interview:'bg-purple-900 text-purple-300',Offer:'bg-orange-900 text-orange-300',Hired:'bg-green-900 text-green-300',Rejected:'bg-red-900 text-red-300'}[s]||'bg-gray-800 text-gray-400'; }
+
+async function loadDashboard() {
+  const {data:jobs} = await sb.from('hr_jobs').select('*');
+  const {data:candidates} = await sb.from('hr_candidates').select('*');
+  document.getElementById('stat-jobs').textContent = jobs?.length||0;
+  document.getElementById('stat-candidates').textContent = candidates?.length||0;
+  document.getElementById('stat-screened').textContent = candidates?.filter(c=>c.ai_score).length||0;
+  document.getElementById('stat-hired').textContent = candidates?.filter(c=>c.status==='Hired').length||0;
+  const recent = (candidates||[]).slice(-5).reverse();
+  document.getElementById('recent-candidates').innerHTML = recent.length ? recent.map(c=>`<div class="flex items-center justify-between py-2 border-b border-gray-800"><div><p class="font-medium">${c.name}</p><p class="text-xs text-gray-400">${c.role}</p></div><span class="px-2 py-1 rounded text-xs ${statusColor(c.status)}">${c.status}</span></div>`).join('') : '<p class="text-gray-500 text-sm">No candidates yet.</p>';
+}
+async function loadJobs() {
+  const {data} = await sb.from('hr_jobs').select('*');
+  document.getElementById('jobs-list').innerHTML = (data||[]).map(j=>`<div class="bg-gray-900 border border-gray-800 rounded-xl p-5"><div class="flex justify-between mb-2"><h3 class="font-semibold">${j.title}</h3><span class="text-xs bg-green-900 text-green-400 px-2 py-1 rounded">Open</span></div><p class="text-sm text-gray-400">${j.department||''} · ${j.location||''}</p><p class="text-xs text-gray-500 mt-1">${j.type||''}</p></div>`).join('')||'<p class="text-gray-500">No jobs yet.</p>';
+}
+async function loadCandidates() {
+  const {data} = await sb.from('hr_candidates').select('*');
+  document.getElementById('candidates-table').innerHTML = (data||[]).map(c=>`<tr class="border-b border-gray-800 hover:bg-gray-900/50"><td class="px-4 py-3 font-medium">${c.name}</td><td class="px-4 py-3 text-gray-400">${c.role||''}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${statusColor(c.status)}">${c.status}</span></td><td class="px-4 py-3">${c.ai_score?`<span class="font-bold ${c.ai_score>=70?'text-green-400':c.ai_score>=50?'text-yellow-400':'text-red-400'}">${c.ai_score}/100</span>`:'<span class="text-gray-600">—</span>'}</td><td class="px-4 py-3"><button onclick="deleteCandidate('${c.id}')" class="text-xs text-red-400">Remove</button></td></tr>`).join('')||'<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No candidates yet.</td></tr>';
+}
+async function saveJob() {
+  await sb.from('hr_jobs').insert([{title:document.getElementById('job-title').value,department:document.getElementById('job-dept').value,location:document.getElementById('job-location').value,description:document.getElementById('job-desc').value,type:document.getElementById('job-type').value}]);
+  hideModal('job-modal'); loadJobs(); loadDashboard();
+}
+async function saveCandidate() {
+  await sb.from('hr_candidates').insert([{name:document.getElementById('cand-name').value,email:document.getElementById('cand-email').value,role:document.getElementById('cand-role').value,status:document.getElementById('cand-status').value}]);
+  hideModal('candidate-modal'); loadCandidates(); loadDashboard();
+}
+async function deleteCandidate(id) { await sb.from('hr_candidates').delete().eq('id',id); loadCandidates(); loadDashboard(); }
+async function runAIScreen() {
+  const role=document.getElementById('screen-role').value, skills=document.getElementById('screen-skills').value, cv=document.getElementById('screen-cv').value, el=document.getElementById('ai-result');
+  if(!cv.trim()){el.innerHTML='<p class="text-red-400">Paste a CV first.</p>';return;}
+  el.innerHTML='<p class="text-gray-400 animate-pulse">🤖 Analyzing...</p>';
+  const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Authorization':`Bearer ${GROQ_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:`You are an expert HR recruiter. Analyze this candidate for the role of "${role}" requiring: ${skills}.\n\nCV:\n${cv}\n\nGive: 1) Score 0-100, 2) Top 3 strengths, 3) Top 2 weaknesses, 4) Recommendation (Hire/Maybe/Reject), 5) Best interview question. Be concise.`}],max_tokens:500})});
+  const data=await res.json();
+  el.innerHTML=`<pre class="whitespace-pre-wrap text-sm text-gray-200 font-sans">${data.choices[0].message.content}</pre>`;
+}
+loadDashboard();
+</script>
+</body>
+</html>
