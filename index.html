@@ -1,306 +1,299 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI HR Manager — Smart Hiring Platform</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HireAI — Smart Recruiting Platform</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-  body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
-  .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-  .gradient-text { background: linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .card-hover { transition: all 0.3s; } .card-hover:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(99,102,241,0.2); }
-  .status-badge { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-  .score-bar { height: 6px; border-radius: 3px; background: #1e293b; } .score-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #6366f1, #06b6d4); transition: width 1s; }
-  input, textarea, select { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px 14px; color: #e2e8f0; width: 100%; transition: border 0.2s; }
-  input:focus, textarea:focus, select:focus { outline: none; border-color: #6366f1; }
-  .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; color: white; }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(99,102,241,0.4); }
-  .tab-active { background: rgba(99,102,241,0.3); border-bottom: 2px solid #6366f1; }
-  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #1e293b; } ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 3px; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*{font-family:'Inter',sans-serif;box-sizing:border-box}
+body{background:#f8f7f4;color:#1a1a2e;min-height:100vh}
+.sidebar{background:#1a1a2e;min-height:100vh;width:260px;position:fixed;left:0;top:0;display:flex;flex-direction:column;padding:28px 20px}
+.main{margin-left:260px;padding:40px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;cursor:pointer;color:#8892a4;font-size:14px;font-weight:500;transition:all .2s;margin-bottom:4px}
+.nav-item:hover,.nav-item.active{background:rgba(255,255,255,.08);color:#fff}
+.nav-item .icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.card{background:#fff;border-radius:16px;padding:24px;border:1px solid #eee}
+.stat-card{background:#fff;border-radius:16px;padding:24px;border:1px solid #eee;display:flex;align-items:center;gap:16px}
+.btn-primary{background:#1a1a2e;color:#fff;border:none;padding:10px 20px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s}
+.btn-primary:hover{background:#2d2d4e;transform:translateY(-1px)}
+.btn-ghost{background:transparent;border:1.5px solid #e5e5e5;color:#555;padding:9px 18px;border-radius:10px;font-weight:500;font-size:14px;cursor:pointer;transition:all .2s}
+.btn-ghost:hover{border-color:#1a1a2e;color:#1a1a2e}
+.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.score-ring{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.tab{padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;color:#888;transition:all .2s}
+.tab.active{background:#1a1a2e;color:#fff}
+input,textarea,select{border:1.5px solid #e8e8e8;border-radius:10px;padding:10px 14px;font-size:14px;width:100%;outline:none;transition:border .2s;font-family:'Inter',sans-serif;background:#fff}
+input:focus,textarea:focus,select:focus{border-color:#1a1a2e}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+.kanban-col{background:#f4f4f6;border-radius:14px;padding:16px;min-width:180px;flex:1}
+.k-card{background:#fff;border-radius:10px;padding:14px;border:1px solid #eee;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.k-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .35s ease}
+.panel{display:none}.panel.active{display:block}
 </style>
 </head>
 <body>
-<div id="app">
-  <!-- Header -->
-  <nav class="glass sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-        <i class="fas fa-brain text-white text-lg"></i>
-      </div>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div style="margin-bottom:32px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div style="width:34px;height:34px;background:linear-gradient(135deg,#6c63ff,#3ecfcf);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">🧠</div>
+      <div><div style="color:#fff;font-weight:800;font-size:16px">HireAI</div><div style="color:#556;font-size:11px">Recruiting Platform</div></div>
+    </div>
+  </div>
+  <div onclick="showPanel('dashboard')" class="nav-item active" id="nav-dashboard">
+    <div class="icon" style="background:rgba(108,99,255,.2)">📊</div> Dashboard
+  </div>
+  <div onclick="showPanel('jobs')" class="nav-item" id="nav-jobs">
+    <div class="icon" style="background:rgba(62,207,207,.15)">💼</div> Job Listings
+  </div>
+  <div onclick="showPanel('pipeline')" class="nav-item" id="nav-pipeline">
+    <div class="icon" style="background:rgba(255,167,86,.15)">🔄</div> Pipeline
+  </div>
+  <div onclick="showPanel('ai')" class="nav-item" id="nav-ai">
+    <div class="icon" style="background:rgba(255,100,130,.15)">✨</div> AI Screener
+  </div>
+  <div style="flex:1"></div>
+  <div style="background:rgba(108,99,255,.15);border-radius:12px;padding:16px;margin-top:16px">
+    <div style="color:#fff;font-weight:600;font-size:13px;margin-bottom:4px">👋 Demo Mode</div>
+    <div style="color:#8892a4;font-size:12px">Sample data loaded</div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="panel-dashboard" class="panel active fade-in">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px">
       <div>
-        <h1 class="font-bold text-lg gradient-text">AI HR Manager</h1>
-        <p class="text-xs text-slate-400">Smart Hiring Platform</p>
+        <div style="font-size:26px;font-weight:800;color:#1a1a2e">Good afternoon, Davide 👋</div>
+        <div style="color:#888;font-size:14px;margin-top:4px">Here's what's happening with your hiring pipeline today.</div>
+      </div>
+      <button class="btn-primary" onclick="showPanel('jobs')">+ Post New Job</button>
+    </div>
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px">
+      <div class="stat-card"><div style="background:#eef0ff;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px">💼</div><div><div style="font-size:26px;font-weight:800;color:#1a1a2e" id="s-jobs">0</div><div style="color:#888;font-size:13px">Open Positions</div></div></div>
+      <div class="stat-card"><div style="background:#fff0f3;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px">👥</div><div><div style="font-size:26px;font-weight:800;color:#1a1a2e" id="s-cands">0</div><div style="color:#888;font-size:13px">Candidates</div></div></div>
+      <div class="stat-card"><div style="background:#f0fff8;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px">✅</div><div><div style="font-size:26px;font-weight:800;color:#1a1a2e" id="s-hired">0</div><div style="color:#888;font-size:13px">Hired</div></div></div>
+      <div class="stat-card"><div style="background:#fffbef;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px">⚡</div><div><div style="font-size:26px;font-weight:800;color:#1a1a2e" id="s-ai">0</div><div style="color:#888;font-size:13px">AI Screened</div></div></div>
+    </div>
+    <!-- Recent -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="card">
+        <div style="font-weight:700;font-size:16px;margin-bottom:16px">Recent Candidates</div>
+        <div id="dash-cands"></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;font-size:16px;margin-bottom:16px">Open Positions</div>
+        <div id="dash-jobs"></div>
       </div>
     </div>
-    <div class="flex gap-2">
-      <button onclick="showTab('jobs')" id="tab-jobs" class="px-4 py-2 rounded-lg text-sm font-medium tab-active transition-all" onclick="">
-        <i class="fas fa-briefcase mr-1"></i> Jobs
-      </button>
-      <button onclick="showTab('candidates')" id="tab-candidates" class="px-4 py-2 rounded-lg text-sm font-medium transition-all">
-        <i class="fas fa-users mr-1"></i> Candidates
-      </button>
-      <button onclick="showTab('ai')" id="tab-ai" class="px-4 py-2 rounded-lg text-sm font-medium transition-all">
-        <i class="fas fa-robot mr-1"></i> AI Analyze
-      </button>
+  </div>
+
+  <!-- JOBS -->
+  <div id="panel-jobs" class="panel fade-in">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
+      <div style="font-size:24px;font-weight:800">Job Listings</div>
+      <button class="btn-primary" onclick="toggleEl('job-form')">+ New Position</button>
     </div>
-  </nav>
-
-  <div class="max-w-6xl mx-auto px-6 py-8">
-    <!-- JOBS TAB -->
-    <div id="panel-jobs">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h2 class="text-2xl font-bold">Open Positions</h2>
-          <p class="text-slate-400 text-sm mt-1">Manage your job listings</p>
-        </div>
-        <button onclick="toggleForm('job-form')" class="btn-primary"><i class="fas fa-plus mr-2"></i>Post Job</button>
+    <div id="job-form" style="display:none" class="card" style="margin-bottom:20px">
+      <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:#6c63ff">Create Job Posting</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">JOB TITLE *</label><input id="jt" placeholder="e.g. Senior Frontend Developer"></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">DEPARTMENT</label><input id="jd" placeholder="Engineering"></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">LOCATION</label><input id="jl" placeholder="Remote / Milan, Italy"></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">TYPE</label><select id="jty"><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option></select></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">SALARY RANGE</label><input id="js" placeholder="€40k – €60k"></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">REQUIREMENTS</label><input id="jr" placeholder="3+ yrs React, TypeScript..."></div>
       </div>
-
-      <!-- Job Form -->
-      <div id="job-form" class="hidden glass rounded-2xl p-6 mb-6">
-        <h3 class="font-semibold text-lg mb-4 gradient-text">New Job Position</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 mb-1 block">Job Title *</label><input id="job-title" placeholder="e.g. Senior Frontend Developer"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Department</label><input id="job-dept" placeholder="e.g. Engineering"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Location</label><input id="job-location" placeholder="e.g. Remote / Milan"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Type</label>
-            <select id="job-type"><option>Full-time</option><option>Part-time</option><option>Contract</option><option>Internship</option></select>
-          </div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Salary Range</label><input id="job-salary" placeholder="e.g. €30k-50k"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Requirements</label><input id="job-req" placeholder="e.g. 3+ years React, TypeScript"></div>
-          <div class="col-span-2"><label class="text-xs text-slate-400 mb-1 block">Description</label><textarea id="job-desc" rows="3" placeholder="Full job description..."></textarea></div>
-        </div>
-        <div class="flex gap-3 mt-4">
-          <button onclick="saveJob()" class="btn-primary"><i class="fas fa-save mr-2"></i>Save Position</button>
-          <button onclick="toggleForm('job-form')" class="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>
-        </div>
-      </div>
-
-      <div id="jobs-list" class="grid gap-4"></div>
-    </div>
-
-    <!-- CANDIDATES TAB -->
-    <div id="panel-candidates" class="hidden">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h2 class="text-2xl font-bold">Candidates Pipeline</h2>
-          <p class="text-slate-400 text-sm mt-1">Track your applicants</p>
-        </div>
-        <button onclick="toggleForm('cand-form')" class="btn-primary"><i class="fas fa-user-plus mr-2"></i>Add Candidate</button>
-      </div>
-
-      <div id="cand-form" class="hidden glass rounded-2xl p-6 mb-6">
-        <h3 class="font-semibold text-lg mb-4 gradient-text">New Candidate</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 mb-1 block">Full Name *</label><input id="cand-name" placeholder="John Doe"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Email</label><input id="cand-email" placeholder="john@example.com" type="email"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Phone</label><input id="cand-phone" placeholder="+39 333 1234567"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Applied Role</label><input id="cand-role" placeholder="e.g. Frontend Developer"></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">LinkedIn URL</label><input id="cand-linkedin" placeholder="https://linkedin.com/in/..."></div>
-          <div><label class="text-xs text-slate-400 mb-1 block">Status</label>
-            <select id="cand-status"><option>New</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option></select>
-          </div>
-          <div class="col-span-2"><label class="text-xs text-slate-400 mb-1 block">CV Summary / Notes</label><textarea id="cand-cv" rows="3" placeholder="Paste CV highlights or notes..."></textarea></div>
-        </div>
-        <div class="flex gap-3 mt-4">
-          <button onclick="saveCandidate()" class="btn-primary"><i class="fas fa-save mr-2"></i>Save</button>
-          <button onclick="toggleForm('cand-form')" class="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>
-        </div>
-      </div>
-
-      <!-- Kanban board -->
-      <div class="grid grid-cols-5 gap-4" id="kanban-board">
-        <div class="glass rounded-xl p-4"><h3 class="text-xs font-bold text-slate-400 uppercase mb-3">New</h3><div id="col-New" class="space-y-3 min-h-16"></div></div>
-        <div class="glass rounded-xl p-4"><h3 class="text-xs font-bold text-blue-400 uppercase mb-3">Screening</h3><div id="col-Screening" class="space-y-3 min-h-16"></div></div>
-        <div class="glass rounded-xl p-4"><h3 class="text-xs font-bold text-yellow-400 uppercase mb-3">Interview</h3><div id="col-Interview" class="space-y-3 min-h-16"></div></div>
-        <div class="glass rounded-xl p-4"><h3 class="text-xs font-bold text-purple-400 uppercase mb-3">Offer</h3><div id="col-Offer" class="space-y-3 min-h-16"></div></div>
-        <div class="glass rounded-xl p-4"><h3 class="text-xs font-bold text-green-400 uppercase mb-3">Hired</h3><div id="col-Hired" class="space-y-3 min-h-16"></div></div>
+      <label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">DESCRIPTION</label>
+      <textarea id="jdesc" rows="3" placeholder="Full job description..." style="margin-bottom:12px"></textarea>
+      <div style="display:flex;gap:10px">
+        <button class="btn-primary" onclick="saveJob()">Save Position</button>
+        <button class="btn-ghost" onclick="toggleEl('job-form')">Cancel</button>
       </div>
     </div>
+    <div id="jobs-list" style="display:grid;grid-template-columns:1fr 1fr;gap:16px"></div>
+  </div>
 
-    <!-- AI TAB -->
-    <div id="panel-ai" class="hidden">
-      <div class="mb-6">
-        <h2 class="text-2xl font-bold">AI Screening & Analysis</h2>
-        <p class="text-slate-400 text-sm mt-1">Let AI evaluate your candidates</p>
+  <!-- PIPELINE -->
+  <div id="panel-pipeline" class="panel fade-in">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
+      <div style="font-size:24px;font-weight:800">Candidate Pipeline</div>
+      <button class="btn-primary" onclick="toggleEl('cand-form')">+ Add Candidate</button>
+    </div>
+    <div id="cand-form" style="display:none" class="card" style="margin-bottom:20px">
+      <div style="font-weight:700;font-size:16px;margin-bottom:16px;color:#6c63ff">New Candidate</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">FULL NAME *</label><input id="cn" placeholder="Sofia Bianchi"></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">EMAIL</label><input id="ce" placeholder="sofia@email.com" type="email"></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">ROLE</label><input id="cr" placeholder="Frontend Developer"></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">LINKEDIN</label><input id="cl" placeholder="linkedin.com/in/..."></div>
+        <div><label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">STATUS</label><select id="cs"><option>New</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option></select></div>
       </div>
-      <div class="grid grid-cols-2 gap-6">
-        <div class="glass rounded-2xl p-6">
-          <h3 class="font-semibold mb-4"><i class="fas fa-file-alt text-indigo-400 mr-2"></i>Analyze CV</h3>
-          <div class="space-y-4">
-            <div><label class="text-xs text-slate-400 mb-1 block">Job Requirements</label><textarea id="ai-requirements" rows="3" placeholder="e.g. 3+ years React, TypeScript, team leadership, agile..."></textarea></div>
-            <div><label class="text-xs text-slate-400 mb-1 block">Candidate CV / Summary</label><textarea id="ai-cv" rows="5" placeholder="Paste the candidate's CV text or summary here..."></textarea></div>
-            <button onclick="analyzeCV()" class="btn-primary w-full"><i class="fas fa-brain mr-2"></i>Analyze with AI</button>
-          </div>
-        </div>
-        <div class="glass rounded-2xl p-6">
-          <h3 class="font-semibold mb-4"><i class="fas fa-chart-bar text-purple-400 mr-2"></i>AI Analysis Result</h3>
-          <div id="ai-result" class="text-slate-400 text-sm">
-            <div class="flex flex-col items-center justify-center h-40 opacity-50">
-              <i class="fas fa-robot text-4xl mb-3"></i>
-              <p>Run an analysis to see AI insights</p>
-            </div>
-          </div>
+      <label style="font-size:12px;color:#888;font-weight:600;display:block;margin-bottom:4px">CV SUMMARY</label>
+      <textarea id="ccv" rows="2" placeholder="Paste CV highlights..." style="margin-bottom:12px"></textarea>
+      <div style="display:flex;gap:10px">
+        <button class="btn-primary" onclick="saveCandidate()">Save Candidate</button>
+        <button class="btn-ghost" onclick="toggleEl('cand-form')">Cancel</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px" id="kanban-board">
+      <div class="kanban-col"><div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">🆕 New</div><div id="kcol-New"></div></div>
+      <div class="kanban-col"><div style="font-size:12px;font-weight:700;color:#3b82f6;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">🔍 Screening</div><div id="kcol-Screening"></div></div>
+      <div class="kanban-col"><div style="font-size:12px;font-weight:700;color:#f59e0b;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">💬 Interview</div><div id="kcol-Interview"></div></div>
+      <div class="kanban-col"><div style="font-size:12px;font-weight:700;color:#8b5cf6;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">📋 Offer</div><div id="kcol-Offer"></div></div>
+      <div class="kanban-col"><div style="font-size:12px;font-weight:700;color:#10b981;text-transform:uppercase;margin-bottom:12px;letter-spacing:.5px">🎉 Hired</div><div id="kcol-Hired"></div></div>
+    </div>
+  </div>
+
+  <!-- AI SCREENER -->
+  <div id="panel-ai" class="panel fade-in">
+    <div style="font-size:24px;font-weight:800;margin-bottom:8px">AI Screener ✨</div>
+    <div style="color:#888;font-size:14px;margin-bottom:28px">Paste a CV and job requirements — AI scores the match in seconds.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:16px">Job Requirements</div>
+        <textarea id="ai-req" rows="5" placeholder="e.g. 3+ years React, TypeScript, REST APIs, agile team experience, strong communication skills..." style="margin-bottom:12px"></textarea>
+        <div style="font-weight:700;margin-bottom:10px">Candidate CV / Summary</div>
+        <textarea id="ai-cv" rows="7" placeholder="Paste candidate's CV text or key highlights here..." style="margin-bottom:14px"></textarea>
+        <button class="btn-primary" style="width:100%;padding:13px" onclick="analyzeCV()">✨ Analyze with AI</button>
+      </div>
+      <div class="card" id="ai-result-card">
+        <div style="font-weight:700;margin-bottom:16px">Analysis Result</div>
+        <div id="ai-result" style="color:#aaa;text-align:center;padding:40px 0">
+          <div style="font-size:48px;margin-bottom:12px">🤖</div>
+          <div style="font-size:14px">Run an analysis to see AI insights</div>
         </div>
       </div>
     </div>
   </div>
+
 </div>
 
-<div id="toast" class="fixed bottom-6 right-6 glass px-6 py-3 rounded-xl font-medium hidden z-50 transition-all"></div>
-
 <script>
-const SUPABASE_URL = 'https://nmulrsbqdeqokvrybapn.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tdWxyc2JxZGVxb2t2cnliYXBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyODY0NDcsImV4cCI6MjA5NDg2MjQ0N30.iGN_OGVkw0j3VCEi9qUroMbpT37P3UPRUf1cYyqFBys'
-const GROQ_KEY = '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'
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+const SB_URL='https://nmulrsbqdeqokvrybapn.supabase.co'
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tdWxyc2JxZGVxb2t2cnliYXBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyODY0NDcsImV4cCI6MjA5NDg2MjQ0N30.iGN_OGVkw0j3VCEi9qUroMbpT37P3UPRUf1cYyqFBys'
+const GROQ='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'
+const sb=supabase.createClient(SB_URL,SB_KEY)
 
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast')
-  t.textContent = msg
-  t.className = `fixed bottom-6 right-6 px-6 py-3 rounded-xl font-medium z-50 ${type==='error'?'bg-red-500':'bg-indigo-600'} text-white`
-  t.classList.remove('hidden')
-  setTimeout(() => t.classList.add('hidden'), 3000)
+function showPanel(p){
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'))
+  document.getElementById('panel-'+p).classList.add('active')
+  document.getElementById('nav-'+p).classList.add('active')
+  document.getElementById('panel-'+p).classList.add('fade-in')
+  const loaders={dashboard:loadDashboard,jobs:loadJobs,pipeline:loadPipeline}
+  if(loaders[p])loaders[p]()
+}
+function toggleEl(id){const el=document.getElementById(id);el.style.display=el.style.display==='none'?'block':'none'}
+
+const statusColors={New:'#e2e8f0|#475569',Screening:'#dbeafe|#1d4ed8',Interview:'#fef3c7|#d97706',Offer:'#ede9fe|#7c3aed',Hired:'#d1fae5|#065f46',Rejected:'#fee2e2|#dc2626',Open:'#d1fae5|#065f46',Closed:'#e2e8f0|#475569'}
+function statusBadge(s){const[bg,c]=(statusColors[s]||'#eee|#666').split('|');return`<span style="background:${bg};color:${c};padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600">${s}</span>`}
+function avatarBg(i){const bgs=['#6c63ff','#3ecfcf','#ff6482','#ffa756','#4ade80'];return bgs[i%bgs.length]}
+
+async function seedData(){
+  const{data:jobs}=await sb.from('hr_jobs').select('id').limit(1)
+  if(jobs?.length)return
+  await sb.from('hr_jobs').insert([
+    {title:'Senior Frontend Developer',department:'Engineering',location:'Remote',type:'Full-time',salary_range:'€50k–€70k',requirements:'3+ yrs React, TypeScript',description:'Build and maintain our main product UI.',status:'Open'},
+    {title:'Product Manager',department:'Product',location:'Milan, Italy',type:'Full-time',salary_range:'€55k–€75k',requirements:'2+ yrs PM, agile, SaaS',description:'Define roadmap and coordinate with engineering.',status:'Open'},
+    {title:'Growth Hacker',department:'Marketing',location:'Remote',type:'Contract',salary_range:'€800/month',requirements:'SEO, paid ads, analytics',description:'Drive user acquisition and retention.',status:'Open'}
+  ])
+  await sb.from('hr_candidates').insert([
+    {name:'Sofia Bianchi',email:'sofia@example.com',role:'Frontend Developer',status:'Interview',ai_score:87,cv_summary:'5 yrs React, led team of 3, e-commerce experience'},
+    {name:'Luca Ferrara',email:'luca@example.com',role:'Product Manager',status:'Screening',ai_score:74,cv_summary:'3 yrs PM at fintech startup, agile certified'},
+    {name:'Emma Russo',email:'emma@example.com',role:'Growth Hacker',status:'New',ai_score:91,cv_summary:'Grew MRR by 3x in 18 months via paid + SEO'},
+    {name:'Marco Conti',email:'marco@example.com',role:'Frontend Developer',status:'Offer',ai_score:82,cv_summary:'Senior dev, React + Vue, open source contributor'},
+    {name:'Giulia Marino',email:'giulia@example.com',role:'Frontend Developer',status:'Hired',ai_score:95,cv_summary:'Ex-Google, 7 yrs exp, TypeScript expert'}
+  ])
 }
 
-function showTab(tab) {
-  ['jobs','candidates','ai'].forEach(t => {
-    document.getElementById(`panel-${t}`).classList.add('hidden')
-    document.getElementById(`tab-${t}`).classList.remove('tab-active')
-  })
-  document.getElementById(`panel-${tab}`).classList.remove('hidden')
-  document.getElementById(`tab-${tab}`).classList.add('tab-active')
-  if(tab==='jobs') loadJobs()
-  if(tab==='candidates') loadCandidates()
+async function loadDashboard(){
+  const[{data:jobs},{data:cands}]=await Promise.all([sb.from('hr_jobs').select('*'),sb.from('hr_candidates').select('*')])
+  document.getElementById('s-jobs').textContent=jobs?.filter(j=>j.status==='Open').length||0
+  document.getElementById('s-cands').textContent=cands?.length||0
+  document.getElementById('s-hired').textContent=cands?.filter(c=>c.status==='Hired').length||0
+  document.getElementById('s-ai').textContent=cands?.filter(c=>c.ai_score).length||0
+  document.getElementById('dash-cands').innerHTML=(cands||[]).slice(0,4).map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f5f5">
+      <div class="avatar" style="background:${avatarBg(i)};color:#fff">${c.name[0]}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:14px">${c.name}</div><div style="font-size:12px;color:#888">${c.role||'—'}</div></div>
+      ${statusBadge(c.status)}
+    </div>`).join('')
+  document.getElementById('dash-jobs').innerHTML=(jobs||[]).slice(0,4).map(j=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f5">
+      <div><div style="font-weight:600;font-size:14px">${j.title}</div><div style="font-size:12px;color:#888">${j.department||'—'} · ${j.location||'—'}</div></div>
+      ${statusBadge(j.status)}
+    </div>`).join('')
 }
 
-function toggleForm(id) {
-  document.getElementById(id).classList.toggle('hidden')
+async function saveJob(){
+  const d={title:document.getElementById('jt').value,department:document.getElementById('jd').value,location:document.getElementById('jl').value,type:document.getElementById('jty').value,salary_range:document.getElementById('js').value,requirements:document.getElementById('jr').value,description:document.getElementById('jdesc').value,status:'Open'}
+  if(!d.title)return alert('Title required')
+  await sb.from('hr_jobs').insert(d);toggleEl('job-form');loadJobs()
 }
 
-function statusColor(s) {
-  const map = {New:'bg-slate-500',Screening:'bg-blue-500',Interview:'bg-yellow-500',Offer:'bg-purple-500',Hired:'bg-green-500',Rejected:'bg-red-500',Open:'bg-green-500',Closed:'bg-slate-500'}
-  return map[s] || 'bg-slate-500'
-}
-
-async function saveJob() {
-  const d = {
-    title: document.getElementById('job-title').value,
-    department: document.getElementById('job-dept').value,
-    location: document.getElementById('job-location').value,
-    type: document.getElementById('job-type').value,
-    salary_range: document.getElementById('job-salary').value,
-    requirements: document.getElementById('job-req').value,
-    description: document.getElementById('job-desc').value,
-    status: 'Open'
-  }
-  if(!d.title) { showToast('Title is required','error'); return }
-  const {error} = await sb.from('hr_jobs').insert(d)
-  if(error) { showToast('Error: '+error.message,'error'); return }
-  showToast('✅ Job posted!')
-  toggleForm('job-form')
-  loadJobs()
-}
-
-async function loadJobs() {
-  const {data} = await sb.from('hr_jobs').select('*').order('created_at',{ascending:false})
-  const list = document.getElementById('jobs-list')
-  if(!data?.length) { list.innerHTML = '<div class="glass rounded-xl p-8 text-center text-slate-400"><i class="fas fa-briefcase text-4xl mb-3 opacity-30 block"></i>No jobs posted yet</div>'; return }
-  list.innerHTML = data.map(j => `
-    <div class="glass rounded-xl p-5 card-hover">
-      <div class="flex items-start justify-between">
+async function loadJobs(){
+  const{data}=await sb.from('hr_jobs').select('*').order('created_at',{ascending:false})
+  document.getElementById('jobs-list').innerHTML=(data||[]).map(j=>`
+    <div class="card" style="transition:all .2s" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow=''">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
         <div>
-          <h3 class="font-semibold text-lg">${j.title}</h3>
-          <div class="flex gap-4 mt-1 text-sm text-slate-400">
-            ${j.department?`<span><i class="fas fa-building mr-1"></i>${j.department}</span>`:''}
-            ${j.location?`<span><i class="fas fa-map-marker-alt mr-1"></i>${j.location}</span>`:''}
-            ${j.type?`<span><i class="fas fa-clock mr-1"></i>${j.type}</span>`:''}
-            ${j.salary_range?`<span><i class="fas fa-euro-sign mr-1"></i>${j.salary_range}</span>`:''}
-          </div>
-          ${j.requirements?`<p class="text-xs text-slate-500 mt-2">📋 ${j.requirements}</p>`:''}
-          ${j.description?`<p class="text-sm text-slate-400 mt-2">${j.description.substring(0,120)}${j.description.length>120?'...':''}</p>`:''}
+          <div style="font-weight:700;font-size:16px">${j.title}</div>
+          <div style="font-size:13px;color:#888;margin-top:3px">${j.department||''} ${j.location?'· '+j.location:''}</div>
         </div>
-        <div class="flex flex-col items-end gap-2">
-          <span class="status-badge text-white ${statusColor(j.status)}">${j.status}</span>
-          <button onclick="deleteRecord('hr_jobs','${j.id}',loadJobs)" class="text-xs text-slate-500 hover:text-red-400 transition-colors"><i class="fas fa-trash"></i></button>
-        </div>
+        ${statusBadge(j.status)}
       </div>
-    </div>
-  `).join('')
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        ${j.type?`<span style="background:#f4f4f6;color:#555;padding:3px 9px;border-radius:6px;font-size:12px">${j.type}</span>`:''}
+        ${j.salary_range?`<span style="background:#f4f4f6;color:#555;padding:3px 9px;border-radius:6px;font-size:12px">💰 ${j.salary_range}</span>`:''}
+      </div>
+      ${j.requirements?`<div style="font-size:12px;color:#aaa;margin-top:6px">📋 ${j.requirements}</div>`:''}
+    </div>`).join('')
 }
 
-async function saveCandidate() {
-  const d = {
-    name: document.getElementById('cand-name').value,
-    email: document.getElementById('cand-email').value,
-    phone: document.getElementById('cand-phone').value,
-    role: document.getElementById('cand-role').value,
-    linkedin_url: document.getElementById('cand-linkedin').value,
-    status: document.getElementById('cand-status').value,
-    cv_summary: document.getElementById('cand-cv').value,
-  }
-  if(!d.name) { showToast('Name is required','error'); return }
-  const {error} = await sb.from('hr_candidates').insert(d)
-  if(error) { showToast('Error: '+error.message,'error'); return }
-  showToast('✅ Candidate added!')
-  toggleForm('cand-form')
-  loadCandidates()
+async function saveCandidate(){
+  const d={name:document.getElementById('cn').value,email:document.getElementById('ce').value,role:document.getElementById('cr').value,linkedin_url:document.getElementById('cl').value,status:document.getElementById('cs').value,cv_summary:document.getElementById('ccv').value}
+  if(!d.name)return alert('Name required')
+  await sb.from('hr_candidates').insert(d);toggleEl('cand-form');loadPipeline()
 }
 
-async function loadCandidates() {
-  const {data} = await sb.from('hr_candidates').select('*').order('created_at',{ascending:false})
-  const cols = ['New','Screening','Interview','Offer','Hired']
-  cols.forEach(c => document.getElementById(`col-${c}`).innerHTML = '')
-  if(!data) return
-  data.forEach(c => {
-    const col = document.getElementById(`col-${c.status}`)
-    if(!col) return
-    col.innerHTML += `
-      <div class="glass rounded-lg p-3 text-sm card-hover">
-        <p class="font-medium">${c.name}</p>
-        <p class="text-xs text-slate-400">${c.role||'No role'}</p>
-        ${c.ai_score?`<div class="mt-2"><div class="flex justify-between text-xs mb-1"><span>AI Score</span><span>${c.ai_score}/100</span></div><div class="score-bar"><div class="score-fill" style="width:${c.ai_score}%"></div></div></div>`:''}
-        <div class="flex gap-2 mt-2">
-          ${c.linkedin_url?`<a href="${c.linkedin_url}" target="_blank" class="text-blue-400 text-xs hover:underline"><i class="fab fa-linkedin mr-1"></i>LinkedIn</a>`:''}
-          <button onclick="deleteRecord('hr_candidates','${c.id}',loadCandidates)" class="text-xs text-slate-500 hover:text-red-400 ml-auto"><i class="fas fa-trash"></i></button>
-        </div>
-      </div>`
+async function loadPipeline(){
+  const{data}=await sb.from('hr_candidates').select('*').order('created_at',{ascending:false})
+  const cols=['New','Screening','Interview','Offer','Hired']
+  cols.forEach(c=>document.getElementById('kcol-'+c).innerHTML='')
+  ;(data||[]).forEach((c,i)=>{
+    const col=document.getElementById('kcol-'+c.status)
+    if(!col)return
+    col.innerHTML+=`<div class="k-card">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+        <div class="avatar" style="width:32px;height:32px;background:${avatarBg(i)};color:#fff;font-size:13px">${c.name[0]}</div>
+        <div><div style="font-weight:600;font-size:13px">${c.name}</div><div style="font-size:11px;color:#aaa">${c.role||'—'}</div></div>
+      </div>
+      ${c.ai_score?`<div style="background:#f8f7ff;border-radius:7px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#888">AI Score</span><span style="font-weight:700;font-size:13px;color:#6c63ff">${c.ai_score}/100</span></div>`:''}
+    </div>`
   })
 }
 
-async function analyzeCV() {
-  const req = document.getElementById('ai-requirements').value
-  const cv = document.getElementById('ai-cv').value
-  if(!req || !cv) { showToast('Fill both fields','error'); return }
-  document.getElementById('ai-result').innerHTML = '<div class="flex items-center gap-3 text-indigo-400"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-400"></div><span>Analyzing with AI...</span></div>'
-  try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','Authorization':'Bearer '+GROQ_KEY},
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{role:'user', content: `You are an expert HR recruiter. Analyze this candidate for the given requirements.\n\nREQUIREMENTS:\n${req}\n\nCANDIDATE CV:\n${cv}\n\nRespond with:\n1. SCORE (0-100)\n2. TOP 3 STRENGTHS\n3. TOP 3 GAPS\n4. RECOMMENDATION (Hire/Maybe/No)\n5. SUGGESTED INTERVIEW QUESTIONS (3 questions)\n\nBe concise and direct.`}]
-      })
-    })
-    const data = await res.json()
-    const text = data.choices?.[0]?.message?.content || 'No response'
-    document.getElementById('ai-result').innerHTML = `
-      <div class="text-sm text-slate-300 whitespace-pre-line leading-relaxed">${text.replace(/\*\*(.*?)\*\*/g,'<strong class="text-white">$1</strong>').replace(/\n/g,'<br>')}</div>`
-  } catch(e) {
-    document.getElementById('ai-result').innerHTML = '<p class="text-red-400">Error: '+e.message+'</p>'
-  }
+async function analyzeCV(){
+  const req=document.getElementById('ai-req').value,cv=document.getElementById('ai-cv').value
+  if(!req||!cv)return alert('Fill both fields')
+  document.getElementById('ai-result').innerHTML='<div style="text-align:center;padding:30px;color:#6c63ff">⚡ Analyzing...</div>'
+  const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+GROQ},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:600,messages:[{role:'user',content:`You are an expert HR recruiter. Analyze this candidate.\n\nREQUIREMENTS:\n${req}\n\nCANDIDATE:\n${cv}\n\nRespond with:\n**MATCH SCORE: X/100**\n\n**TOP STRENGTHS:**\n- point 1\n- point 2\n- point 3\n\n**GAPS:**\n- gap 1\n- gap 2\n\n**VERDICT:** Hire / Maybe / Pass\n\n**3 INTERVIEW QUESTIONS:**\n1. ...\n2. ...\n3. ...`}]})})
+  const data=await res.json()
+  const txt=data.choices?.[0]?.message?.content||''
+  document.getElementById('ai-result').innerHTML=`<div style="font-size:14px;line-height:1.8;color:#333">${txt.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#1a1a2e">$1</strong>').replace(/\n/g,'<br>')}</div>`
 }
 
-async function deleteRecord(table, id, reload) {
-  if(!confirm('Delete this record?')) return
-  await sb.from(table).delete().eq('id', id)
-  reload()
-}
-
-loadJobs()
+async function init(){await seedData();loadDashboard()}
+init()
 </script>
 </body>
 </html>
